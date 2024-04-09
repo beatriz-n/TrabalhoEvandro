@@ -9,6 +9,78 @@ CREATE DATABASE trabalho
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'trabalho')\gexec
 ALTER DATABASE trabalho SET datestyle TO 'ISO, DMY';
 
+CREATE TABLE paciente (
+    id_paciente INTEGER PRIMARY KEY,
+    codigo NUMERIC UNIQUE,
+    nome VARCHAR(50),
+    idade NUMERIC
+);
+
+CREATE TABLE medico (
+    id_medico INTEGER PRIMARY KEY,
+    crm NUMERIC UNIQUE,
+    nome VARCHAR(50),
+    especialidade VARCHAR
+);
+
+CREATE TABLE atende (
+    id_atende INTEGER PRIMARY KEY,
+    id_paciente INTEGER,
+    id_medico INTEGER,
+    data_consulta DATE,
+    FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente),
+    FOREIGN KEY (id_medico) REFERENCES medico(id_medico)
+);
+
+CREATE TABLE cirurgia (
+    id_cirurgia INTEGER PRIMARY KEY,
+    codigo NUMERIC UNIQUE,
+    data_consulta DATE,
+    descricao VARCHAR,
+    id_paciente INTEGER,
+    FOREIGN KEY (id_paciente) REFERENCES paciente(id_paciente)
+);
+
+CREATE SEQUENCE sid_cirurgia;
+CREATE SEQUENCE sid_paciente;
+CREATE SEQUENCE sid_medico;
+CREATE SEQUENCE sid_atende;
+
+INSERT INTO paciente (id_paciente, codigo, nome, idade) VALUES
+(nextval('sid_paciente'), 123456, 'João', 35),
+(nextval('sid_paciente'), 789012, 'Maria', 28),
+(nextval('sid_paciente'), 345678, 'Pedro', 42),
+(nextval('sid_paciente'), 901234, 'Ana', 50),
+(nextval('sid_paciente'), 567890, 'Mariana', 31),
+(nextval('sid_paciente'), 432109, 'Carlos', 47);
+
+-- Inserções na tabela medico
+INSERT INTO medico (id_medico, crm, nome, especialidade) VALUES
+(nextval('sid_medico'), 987654, 'Dr. Silva', 'Clínico Geral'),
+(nextval('sid_medico'), 654321, 'Dr. Santos', 'Pediatra'),
+(nextval('sid_medico'), 210987, 'Dra. Oliveira', 'Ginecologista'),
+(nextval('sid_medico'), 876543, 'Dr. Almeida', 'Cardiologista'),
+(nextval('sid_medico'), 543210, 'Dra. Costa', 'Dermatologista'),
+(nextval('sid_medico'), 109876, 'Dr. Pereira', 'Ortopedista');
+
+-- Inserções na tabela atende
+INSERT INTO atende (id_atende, id_paciente, id_medico, data_consulta) VALUES
+(nextval('sid_atende'), 1, 1, '2024-04-01'),
+(nextval('sid_atende'), 2, 2, '2024-04-02'),
+(nextval('sid_atende'), 3, 3, '2024-04-03'),
+(nextval('sid_atende'), 4, 4, '2024-04-04'),
+(nextval('sid_atende'), 5, 5, '2024-04-05'),
+(nextval('sid_atende'), 6, 6, '2024-04-06');
+
+-- Inserções na tabela cirurgia
+INSERT INTO cirurgia (id_cirurgia, codigo, data_consulta, descricao, id_paciente) VALUES
+(nextval('sid_cirurgia'), 123, '2024-04-10', 'Cirurgia de apendicite', 1),
+(nextval('sid_cirurgia'), 456, '2024-04-15', 'Cirurgia de hérnia', 2),
+(nextval('sid_cirurgia'), 789, '2024-04-20', 'Cirurgia de catarata', 3),
+(nextval('sid_cirurgia'), 321, '2024-04-25', 'Cirurgia cardíaca', 4),
+(nextval('sid_cirurgia'), 654, '2024-04-30', 'Cirurgia plástica', 5),
+(nextval('sid_cirurgia'), 987, '2024-05-05', 'Cirurgia de joelho', 6);
+
 ------------------2------------------
 CREATE OR REPLACE FUNCTION criar_cirurgia(codigo_cirurgia numeric, codigo_paciente numeric, data_cirurgia date, descricao_cirurgia varchar)
 	RETURNS VOID AS
