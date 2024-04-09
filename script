@@ -9,7 +9,7 @@ CREATE DATABASE trabalho
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'trabalho')\gexec
 ALTER DATABASE trabalho SET datestyle TO 'ISO, DMY';
 
------------------ 3 -----------------
+----------------- 3 ------------------
 CREATE OR REPLACE FUNCTION f_verificaIntervaloData(dataInicio atende.data_consulta%type, dataFim atende.data_consulta%type)
 RETURNS SETOF RECORD
 AS $$
