@@ -1,0 +1,75 @@
+------------- 1 ------------
+select
+'
+CREATE DATABASE trabalho
+    WITH
+    OWNER = postgres  
+    CONNECTION LIMIT = -1;
+'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'trabalho')\gexec
+ALTER DATABASE trabalho SET datestyle TO 'ISO, DMY';
+
+----------------- 3 -----------------
+CREATE OR REPLACE FUNCTION f_verificaIntervaloData(dataInicio atende.data_consulta%type, dataFim atende.data_consulta%type)
+RETURNS SETOF RECORD
+AS $$
+DECLARE
+    result RECORD;
+BEGIN
+    FOR result IN
+        SELECT m.nome as nome_medico,
+               COUNT(at.id_atende) as contador
+        FROM atende at
+        INNER JOIN medico m ON m.id_medico = at.id_medico
+        WHERE at.data_consulta BETWEEN dataInicio AND dataFim
+        GROUP BY m.nome
+        ORDER BY m.nome
+    LOOP
+        RETURN NEXT result;
+    END LOOP;
+
+    IF NOT FOUND THEN
+        RAISE 'Intervalo da data % não foi encontrado', dataInicio USING ERRCODE = 'ERR01';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+uso: SELECT * FROM f_verificaIntervaloData('2024-01-01', '2024-12-31') AS (nome_medico VARCHAR, contador BIGINT);
+
+----------------- 4 -----------------
+
+create or replace 
+ function f_checaRegras() returns TRIGGER
+as $$
+declare 
+	dataAtende atende.data_consulta%type;
+
+begin
+    select data_consulta into dataAtende
+	from atende WHERE id_paciente = new.id_paciente;
+--RAISE NOTICE 'Valor de dataAtende: %', dataAtende;
+    if (new.data_consulta > CURRENT_DATE) THEN
+
+         raise 'Data é maior do que a recorrente'
+            using ERRCODE = 'ER003';        
+    end if;
+
+    return new;
+end;
+$$
+LANGUAGE plpgsql;
+
+create trigger tr_data_cirurgia
+before insert
+on cirurgia for each row
+execute procedure f_checaRegras();
+
+
+--exemplo
+INSERT INTO cirurgia (id_cirurgia, codigo, data_consulta, descricao, id_paciente) VALUES
+(nextval('sid_cirurgia'), 565, '2024-04-06', 'Cirurgia de Miopia', 6);
+
+INSERT INTO cirurgia (id_cirurgia, codigo, data_consulta, descricao, id_paciente) VALUES
+(nextval('sid_cirurgia'), 565, '2024-03-12', 'Cirurgia do siso', 6);
+
+select * from cirurgia;
