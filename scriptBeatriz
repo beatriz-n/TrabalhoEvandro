@@ -24,6 +24,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+INSERT INTO atende (id_atende, id_paciente, id_medico, data_consulta) VALUES
+(nextval('sid_atende'), 1, 1, '2024-04-14'),
+(nextval('sid_atende'), 2, 1, '2024-04-10');
+
 uso: SELECT * FROM f_verificaIntervaloData('2024-01-01', '2024-12-31') AS (nome_medico VARCHAR, contador BIGINT);
 
 ----------------- 4 -----------------
