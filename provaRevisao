@@ -1,0 +1,176 @@
+create or replace function f_olamundo() returns text as
+$$
+begin
+- - Função que mostra a frase Olá Mundo!;
+return ’Olá Mundo!’ ;
+end;
+$$
+language PLPGSQL;
+
+-----------------------------------------------------------------------------------------------------
+-- funcão simples de soma
+create or replace function f_soma(n1 int, n2 int) returns integer as
+$$
+begin 
+return n1+n2;
+end;
+$$
+language PLPGSQL;
+
+select f_soma(2,4);
+
+-----------------------------------------------------------------------------------------------------
+--funcao simples calculadora comparando inteiros
+create or replace function f_selectCalculadora(op int, n1 int, n2 int) returns numeric as
+$$
+declare
+resultado numeric;
+begin
+	if(op = 1) then
+		resultado = n1 + n2;
+	elsif(op = 2) then
+		resultado = n1 - n2;
+	elsif(op = 3) then
+		resultado = n1 / n2;
+	elsif(op = 4) then 
+		resultado = n1 * n2;
+	else
+		resultado = -1;
+	end if;
+	return resultado;
+	end;
+	$$
+	language plpgsql;
+	
+	select f_selectCalculadora(4,6,2);
+
+-----------------------------------------------------------------------------------------------------
+--funcao simples calculadora comparando inteiros + concatenação -> ||
+create or replace function f_selectCalculadoraStr(op char, n1 int, n2 int) returns text as
+$$
+declare
+resultado numeric;
+begin
+	if(op = 'soma') then
+		resultado = n1 + n2;
+	elsif(op = 'sub') then
+		resultado = n1 - n2;
+	elsif(op = 'div') then
+		resultado = n1 / n2;
+	elsif(op = 'mult') then
+		resultado = n1 * n2;
+	else
+		resultado = -1;
+	end if;
+	return' resuldado ' ||resultado || ' operação escolhida: ' || op;
+	end;
+	$$
+	language plpgsql;
+	
+	--drop de funcao
+	DROP FUNCTION f_selectcalculadorastr(character,integer,integer);
+	
+	select f_selectCalculadoraStr('soma',2,4);
+	select f_selectCalculadoraStr('div',4,2);
+
+-----------------------------------------------------------------------------------------------------
+	-- funcao simples, armazenando e retornando um select + concatenação -> ||
+	create or replace function f_selectPaciente(codPaciente int) returns text as
+	$$
+	declare
+	nomePaciente text;codigo int;
+	begin
+	select id_paciente, nome INTO codigo, nomePaciente from paciente where id_paciente = codPaciente;
+	return 'paciente é: ' || nomePaciente;
+	end;
+	$$
+	LANGUAGE plpgsql;
+	
+	drop function f_selectPaciente(int, char);
+	select f_selectPaciente(3);
+	
+-----------------------------------------------------------------------------------------------------
+	--inserindo com returning ... into (no caso do codigo retorna o id do medico na função resultado)
+	create or replace function f_insertMedico(nomePaciente text, espePaciente text, telpaciente text, emailPaciente text) returns integer as
+	$$
+	declare
+	resultado int;
+	begin
+	insert into medico(id_medico,nome, especialidade,telefone,email) values (nextval('seq_medico'),nomePaciente, espePaciente, telPaciente, emailPaciente)
+	returning id_medico into resultado;
+	return resultado;
+	end;
+	$$
+	language plpgsql;
+	
+	drop function f_insertMedico(text, text, text, text);
+	-- criando uma sequencia (eu tentei rodar sem a sequencia mas não deu certo)
+	create sequence seq_medico;
+	select f_insertMedico('bruno', 'fisioterapia', '17997998544', 'bruno@gmail');
+		
+-----------------------------------------------------------------------------------------------------
+--retorno de *um registro* -> record. 
+-- funcao simples que retorna o id do medico
+create or replace function f_selectMedicoRecord(codMed medico.id_medico%type) returns record as
+$$
+declare
+idMedico record;
+begin
+select nome, especialidade, telefone, email into idMedico from medico where id_medico = codMed;
+return idMedico;
+end;
+$$
+LANGUAGE plpgsql;
+
+select * from f_selectMedicoRecord(1) as (nome varchar, especialidade varchar, telefone varchar, email varchar);
+
+select * from medico;
+-----------------------------------------------------------------------------------------------------
+-- *Retorno de vários* -> setof record
+-- funcao simples que acha o nome do registro por letras
+	create or replace function f_selectMedicoOf(nomeMed medico.nome%type) returns setof record as
+	$$
+	declare
+	infoMed record;
+	begin
+	for infoMed in
+	select nome, especialidade, telefone, email from Medico where nome like '%' || nomeMed || '%'
+	loop
+	return next infoMed;
+	end loop;
+	end;
+	$$
+	language plpgsql;
+	select * from f_selectMedicoOf('br') as (nome varchar, especialidade varchar, telefone varchar, email varchar);
+-----------------------------------------------------------------------------------------------------
+	--funcao que insere no banco, tratamento de erro e trigger
+	
+CREATE OR REPLACE FUNCTION f_insereMedico() RETURNS TRIGGER AS
+$$
+DECLARE
+    existe BOOLEAN;
+BEGIN
+    SELECT INTO existe
+        EXISTS(SELECT id_medico FROM medico WHERE id_medico = NEW.id_medico);
+
+    IF existe THEN
+        RAISE EXCEPTION 'id existe'
+        USING ERRCODE = 'ER003';
+    END IF;
+
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_logMedico
+BEFORE INSERT OR UPDATE
+ON medico
+FOR EACH ROW
+EXECUTE FUNCTION f_insereMedico();
+
+INSERT INTO medico (id_medico, nome, especialidade, telefone, email)
+VALUES (nextval('seq_medico'), 'mario', 'obstreta', '17997838844', 'mario@gmail.com');
+
+	drop trigger tr_logMedico on medico;
+	select * from medico;
